@@ -1,7 +1,9 @@
 include config.mk
 
 OBJS := main.o \
+	backend_stdout_text.o \
 	plugins.o \
+	render.o \
 	util.o \
 	clock.o \
 	cpu.o \
@@ -11,6 +13,10 @@ OBJS := main.o \
 	power.o \
 	volume.o \
 	pa_watcher.o
+
+ifeq ($(WITH_X11),1)
+OBJS += backend_x11.o
+endif
 
 verbar: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)

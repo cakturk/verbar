@@ -28,16 +28,18 @@
 #include <sys/signalfd.h>
 #include <sys/timerfd.h>
 #include <sys/types.h>
-#include <X11/Xlib.h>
 
+#include "backend.h"
 #include "verbar_internal.h"
+#include "render.h"
 
 static const char *progname = "verbar";
-
-extern char **environ;
-
-static Display *dpy;
-static Window root;
+static const struct backend *const backends[] = {
+#if WITH_X11
+	&x11_backend,
+#endif
+	&stdout_text_backend,
+};
 
 static const char *config[] = {
 	"dropbox",
@@ -52,6 +54,12 @@ static const char *config[] = {
 static bool quit, update, wordy;
 
 static struct str status_str;
+#if WITH_X11
+static const struct backend *backend = &x11_backend;
+#else
+static const struct backend *backend = &stdout_text_backend;
+#endif
+static void *backend_data;
 
 void request_update(void)
 {
@@ -60,20 +68,10 @@ void request_update(void)
 
 static int update_statusbar(void)
 {
-	status_str.len = 0;
-
-	if (str_append(&status_str, " "))
+	if (render_status(&status_str, wordy))
 		return -1;
 
-	append_sections(&status_str, wordy);
-
-	if (str_null_terminate(&status_str))
-		return -1;
-
-	XStoreName(dpy, root, status_str.buf);
-	XFlush(dpy);
-
-	return 0;
+	return backend->write_status(backend_data, status_str.buf);
 }
 
 static int signal_fd_callback(int fd, void *data, uint32_t events)
@@ -181,14 +179,31 @@ static int timer_fd_init(int epoll_fd)
 	return epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev);
 }
 
+static const struct backend *find_backend(const char *name)
+{
+	size_t i;
+
+	for (i = 0; i < sizeof(backends) / sizeof(*backends); i++) {
+		if (strcmp(backends[i]->name, name) == 0)
+			return backends[i];
+	}
+
+	return NULL;
+}
+
 static void usage(bool error)
 {
 	fprintf(error ? stderr : stdout,
-		"usage: %s [--icons PATH] [--wordy]\n"
+		"usage: %s [--backend NAME] [--icons PATH] [--wordy]\n"
 		"\n"
-		"Gather system information and set the root window name\n"
+		"Gather system information and write status text\n"
 		"\n"
 		"Options:\n"
+#if WITH_X11
+		"  -b, --backend NAME  output backend (x11, stdout-text)\n"
+#else
+		"  -b, --backend NAME  output backend (stdout-text)\n"
+#endif
 		"  -i, --icons PATH    directory containing icon files\n"
 		"  -w, --wordy         enable wordy output on startup\n"
 		"\n"
@@ -201,6 +216,7 @@ static void usage(bool error)
 int main(int argc, char **argv)
 {
 	struct option long_options[] = {
+		{"backend", required_argument, NULL, 'b'},
 		{"icons", required_argument, NULL, 'i'},
 		{"wordy", no_argument, NULL, 'w'},
 		{"help", no_argument, NULL, 'h'},
@@ -216,11 +232,19 @@ int main(int argc, char **argv)
 	for (;;) {
 		int c;
 
-		c = getopt_long(argc, argv, "i:wh", long_options, NULL);
+		c = getopt_long(argc, argv, "b:i:wh", long_options, NULL);
 		if (c == -1)
 			break;
 
 		switch (c) {
+		case 'b':
+			backend = find_backend(optarg);
+			if (!backend) {
+				fprintf(stderr, "unknown backend \"%s\"\n",
+					optarg);
+				usage(true);
+			}
+			break;
 		case 'i':
 			icon_path = optarg;
 			break;
@@ -236,14 +260,11 @@ int main(int argc, char **argv)
 	if (optind != argc)
 		usage(true);
 
-	dpy = XOpenDisplay(NULL);
-	if (!dpy) {
-		fprintf(stderr, "unable to open display '%s'\n",
-			XDisplayName(NULL));
+	backend_data = backend->init();
+	if (!backend_data) {
 		status = EXIT_FAILURE;
 		goto out;
 	}
-	root = DefaultRootWindow(dpy);
 
 	epoll_fd = epoll_create1(EPOLL_CLOEXEC);
 	if (epoll_fd == -1) {
@@ -330,10 +351,6 @@ out:
 	if (signal_cb.fd != -1)
 		close(signal_cb.fd);
 	str_free(&status_str);
-	if (dpy) {
-		XStoreName(dpy, root, "");
-		XFlush(dpy);
-		XCloseDisplay(dpy);
-	}
+	backend->shutdown(backend_data);
 	return status;
 }
