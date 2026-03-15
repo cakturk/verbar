@@ -23,11 +23,15 @@
 #include <unistd.h>
 #include <sys/epoll.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 
 #include "pa_watcher.h"
 #include "verbar.h"
 
 struct volume_section {
+	/* Do we have valid volume data to render? */
+	bool available;
+
 	/* Is the volume muted? */
 	bool muted;
 
@@ -39,6 +43,7 @@ struct volume_section {
 };
 
 static void volume_free(void *data);
+static void volume_stop_watcher(struct volume_section *section, bool kill_child);
 static int volume_update(struct volume_section *section);
 
 static int volume_epoll_callback(int fd, void *data, uint32_t events)
@@ -59,6 +64,7 @@ static void *volume_init(int epoll_fd)
 		perror("malloc");
 		return NULL;
 	}
+	section->available = false;
 	section->muted = false;
 	section->volume = 0;
 	section->child = 0;
@@ -104,13 +110,24 @@ static void *volume_init(int epoll_fd)
 	return section;
 }
 
+static void volume_stop_watcher(struct volume_section *section, bool kill_child)
+{
+	if (section->epoll.fd != -1) {
+		close(section->epoll.fd);
+		section->epoll.fd = -1;
+	}
+	if (section->child) {
+		if (kill_child)
+			kill(section->child, SIGKILL);
+		waitpid(section->child, NULL, 0);
+		section->child = 0;
+	}
+}
+
 static void volume_free(void *data)
 {
 	struct volume_section *section = data;
-	if (section->child)
-		kill(section->child, SIGKILL);
-	if (section->epoll.fd != -1)
-		close(section->epoll.fd);
+	volume_stop_watcher(section, true);
 	free(section);
 }
 
@@ -128,11 +145,21 @@ static int volume_update(struct volume_section *section)
 		perror("read(pa_watcher)");
 		return -1;
 	}
+	if (ssret == 0) {
+		section->available = false;
+		volume_stop_watcher(section, false);
+		request_update();
+		return 0;
+	}
 	if (ssret != sizeof(volume)) {
 		fprintf(stderr, "short read from pa_watcher\n");
-		return -1;
+		section->available = false;
+		volume_stop_watcher(section, false);
+		request_update();
+		return 0;
 	}
 
+	section->available = true;
 	section->muted = volume.muted;
 	section->volume = volume.volume;
 
@@ -144,6 +171,8 @@ static int volume_update(struct volume_section *section)
 static int volume_append(void *data, struct str *str, bool wordy)
 {
 	struct volume_section *section = data;
+	if (!section->available)
+		return 0;
 	if (section->muted) {
 		if (str_append_icon(str, "spkr_mute"))
 			return -1;
