@@ -17,6 +17,8 @@
 
 #include "verbar_internal.h"
 
+void set_icon_output(bool enabled);
+
 int render_status(struct str *str, bool wordy, bool render_icons)
 {
 	set_icon_output(render_icons);

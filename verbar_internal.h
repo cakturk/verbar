@@ -18,6 +18,7 @@
 #ifndef VERBAR_INTERNAL_H
 #define VERBAR_INTERNAL_H
 
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "verbar.h"
@@ -40,6 +41,5 @@ void free_sections(void);
 int update_timer_sections(void);
 int append_sections(struct str *str, bool wordy);
 int render_status(struct str *str, bool wordy, bool render_icons);
-void set_icon_output(bool enabled);
 
 #endif /* VERBAR_INTERNAL_H */
