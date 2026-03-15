@@ -42,9 +42,15 @@ static const struct backend *const backends[] = {
 };
 
 static const char *config[] = {
+#if WITH_DROPBOX
 	"dropbox",
+#endif
+#if WITH_NET
 	"net",
+#endif
+#if WITH_VOLUME
 	"volume",
+#endif
 	"cpu",
 	"mem",
 	"power",

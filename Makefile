@@ -7,15 +7,23 @@ OBJS := main.o \
 	util.o \
 	clock.o \
 	cpu.o \
-	dropbox.o \
 	mem.o \
-	net.o \
-	power.o \
-	volume.o \
-	pa_watcher.o
+	power.o
 
 ifeq ($(WITH_X11),1)
 OBJS += backend_x11.o
+endif
+
+ifeq ($(WITH_DROPBOX),1)
+OBJS += dropbox.o
+endif
+
+ifeq ($(WITH_NET),1)
+OBJS += net.o
+endif
+
+ifeq ($(WITH_VOLUME),1)
+OBJS += volume.o pa_watcher.o
 endif
 
 verbar: $(OBJS)
