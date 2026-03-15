@@ -18,8 +18,11 @@
 #ifndef BACKEND_H
 #define BACKEND_H
 
+#include <stdbool.h>
+
 struct backend {
 	const char *name;
+	bool render_icons;
 	void *(*init)(void);
 	int (*write_status)(void *data, const char *status);
 	void (*shutdown)(void *data);

@@ -23,6 +23,9 @@ It currently reports:
 - `stdout-text`: write one plain-text status line to standard output on each
   update
 
+The `stdout-text` backend suppresses icon escape sequences even if `--icons`
+is set.
+
 Examples:
 
 ```sh

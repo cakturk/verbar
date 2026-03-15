@@ -24,6 +24,7 @@
 #include "verbar_internal.h"
 
 const char *icon_path;
+static bool icon_output = true;
 
 static int str_realloc(struct str *str, size_t cap)
 {
@@ -124,10 +125,15 @@ int str_append_escaped(struct str *str, const char *buf, size_t len)
 
 int str_append_icon(struct str *str, const char *icon)
 {
-	if (!icon_path)
+	if (!icon_output || !icon_path)
 		return 0;
 
 	return str_appendf(str, "\x1b]9;%s/%s.xbm\a", icon_path, icon);
+}
+
+void set_icon_output(bool enabled)
+{
+	icon_output = enabled;
 }
 
 int parse_int(const char *str, long long *ret)

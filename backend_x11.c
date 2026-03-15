@@ -76,6 +76,7 @@ static void x11_backend_shutdown(void *backend_data)
 
 const struct backend x11_backend = {
 	.name = "x11",
+	.render_icons = true,
 	.init = x11_backend_init,
 	.write_status = x11_backend_write_status,
 	.shutdown = x11_backend_shutdown,

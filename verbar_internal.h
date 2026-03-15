@@ -39,6 +39,7 @@ int init_sections(int epoll_fd, const char **sections, size_t count);
 void free_sections(void);
 int update_timer_sections(void);
 int append_sections(struct str *str, bool wordy);
-int render_status(struct str *str, bool wordy);
+int render_status(struct str *str, bool wordy, bool render_icons);
+void set_icon_output(bool enabled);
 
 #endif /* VERBAR_INTERNAL_H */

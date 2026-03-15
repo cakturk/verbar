@@ -22,6 +22,6 @@
 
 struct str;
 
-int render_status(struct str *str, bool wordy);
+int render_status(struct str *str, bool wordy, bool render_icons);
 
 #endif /* RENDER_H */

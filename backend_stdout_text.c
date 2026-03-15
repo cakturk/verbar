@@ -49,6 +49,7 @@ static void stdout_text_backend_shutdown(void *backend_data)
 
 const struct backend stdout_text_backend = {
 	.name = "stdout-text",
+	.render_icons = false,
 	.init = stdout_text_backend_init,
 	.write_status = stdout_text_backend_write_status,
 	.shutdown = stdout_text_backend_shutdown,

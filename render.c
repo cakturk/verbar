@@ -17,8 +17,9 @@
 
 #include "verbar_internal.h"
 
-int render_status(struct str *str, bool wordy)
+int render_status(struct str *str, bool wordy, bool render_icons)
 {
+	set_icon_output(render_icons);
 	str->len = 0;
 
 	if (str_append(str, " "))

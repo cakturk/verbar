@@ -74,7 +74,7 @@ void request_update(void)
 
 static int update_statusbar(void)
 {
-	if (render_status(&status_str, wordy))
+	if (render_status(&status_str, wordy, backend->render_icons))
 		return -1;
 
 	return backend->write_status(backend_data, status_str.buf);
