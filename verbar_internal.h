@@ -41,5 +41,6 @@ void free_sections(void);
 int update_timer_sections(void);
 int append_sections(struct str *str, bool wordy);
 int render_status(struct str *str, bool wordy, bool render_icons);
+bool icons_enabled(void);
 
 #endif /* VERBAR_INTERNAL_H */

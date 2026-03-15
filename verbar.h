@@ -47,6 +47,7 @@ static inline int str_append(struct str *str, const char *buf)
 int str_append_escaped(struct str *str, const char *buf, size_t len);
 
 int str_append_icon(struct str *str, const char *icon);
+bool icons_enabled(void);
 
 static inline int str_separator(struct str *str)
 {

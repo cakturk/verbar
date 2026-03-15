@@ -136,6 +136,11 @@ void set_icon_output(bool enabled)
 	icon_output = enabled;
 }
 
+bool icons_enabled(void)
+{
+	return icon_output && icon_path;
+}
+
 int parse_int(const char *str, long long *ret)
 {
 	char *endptr;

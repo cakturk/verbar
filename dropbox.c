@@ -201,7 +201,7 @@ static int dropbox_append(void *data, struct str *str, bool wordy)
 	if (ret)
 	    return -1;
 
-	if (wordy) {
+	if (wordy || !icons_enabled()) {
 		if (str_append(str, " "))
 			return -1;
 

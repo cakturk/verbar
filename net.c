@@ -539,13 +539,19 @@ static int append_nic(const struct nic *nic, struct str *str, bool wordy)
 {
 	const int high_thresh = 66;
 	const int low_thresh = 33;
+	bool text_fallback = !icons_enabled();
 	int signal, quality;
 	int ret;
 
 	if (nic->is_wifi) {
 		if (!nic->ssid || !nic->have_wifi_signal) {
-			if (str_append_icon(str, "wifi0"))
-				return -1;
+			if (text_fallback) {
+				if (str_append(str, " wifi"))
+					return -1;
+			} else {
+				if (str_append_icon(str, "wifi0"))
+					return -1;
+			}
 		} else {
 			/* Convert dBm to percentage. */
 			signal = nic->signal;
@@ -574,7 +580,7 @@ static int append_nic(const struct nic *nic, struct str *str, bool wordy)
 			if (ret)
 				return -1;
 
-			if (wordy) {
+			if (wordy || text_fallback) {
 				if (str_append(str, " "))
 					return -1;
 
@@ -586,10 +592,18 @@ static int append_nic(const struct nic *nic, struct str *str, bool wordy)
 			}
 		}
 	} else if (nic->have_addr) {
-		if (str_append_icon(str, "wired"))
-			return -1;
+		if (text_fallback) {
+			if (str_append(str, " "))
+				return -1;
 
-		if (wordy) {
+			if (str_append_escaped(str, nic->name, strlen(nic->name)))
+				return -1;
+		} else {
+			if (str_append_icon(str, "wired"))
+				return -1;
+		}
+
+		if (wordy && !text_fallback) {
 			if (str_append(str, " "))
 				return -1;
 

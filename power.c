@@ -24,6 +24,12 @@
 #define BAT "/sys/class/power_supply/BAT0/capacity"
 
 struct power_section {
+	/* Do we have valid power data to render? */
+	bool available;
+
+	/* Have we already logged that power information is unavailable? */
+	bool unavailable_logged;
+
 	/* Are we plugged into AC? */
 	bool ac_online;
 
@@ -42,6 +48,8 @@ static void *power_init(int epoll_fd)
 		perror("malloc");
 		return NULL;
 	}
+	section->available = false;
+	section->unavailable_logged = false;
 	return section;
 }
 
@@ -59,16 +67,25 @@ static int power_update(void *data)
 
 	ret = parse_int_file(AC, &ac_online);
 	if (ret) {
-		fprintf(stderr, "could not parse %s", AC);
+		if (!section->unavailable_logged) {
+			fprintf(stderr, "could not parse %s or %s\n", AC, BAT);
+			section->unavailable_logged = true;
+		}
+		section->available = false;
 		return 0;
 	}
 
 	ret = parse_int_file(BAT, &battery_capacity);
 	if (ret) {
-		fprintf(stderr, "could not parse %s", BAT);
+		if (!section->unavailable_logged) {
+			fprintf(stderr, "could not parse %s or %s\n", AC, BAT);
+			section->unavailable_logged = true;
+		}
+		section->available = false;
 		return 0;
 	}
 
+	section->available = true;
 	section->ac_online = (bool)ac_online;
 	section->battery_capacity = (double)battery_capacity;
 
@@ -79,6 +96,9 @@ static int power_append(void *data, struct str *str, bool wordy)
 {
 	struct power_section *section = data;
 	int ret;
+
+	if (!section->available)
+		return 0;
 
 	if (section->ac_online)
 		ret = str_append_icon(str, "ac");

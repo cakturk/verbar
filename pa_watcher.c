@@ -28,6 +28,7 @@
 static pa_mainloop *mainloop;
 static pa_context *context;
 static int pipefd;
+static bool context_failed;
 
 static void context_subscribe_callback(pa_context *c,
 				       pa_subscription_event_type_t t,
@@ -127,10 +128,16 @@ static void context_state_callback(pa_context *c, void *userdata)
 		}
 		break;
 	case PA_CONTEXT_FAILED:
-		fprintf(stderr, "pa_context failed\n");
+		if (!context_failed) {
+			fprintf(stderr, "pa_context failed: %s\n",
+				pa_strerror(pa_context_errno(context)));
+			context_failed = true;
+		}
 		pa_mainloop_quit(mainloop, 1);
+		break;
 	case PA_CONTEXT_TERMINATED:
-		fprintf(stderr, "pa_context terminated\n");
+		if (!context_failed)
+			fprintf(stderr, "pa_context terminated\n");
 		pa_mainloop_quit(mainloop, 0);
 		break;
 	default:
@@ -145,6 +152,7 @@ void pa_watcher(int fd)
 	int ret;
 
 	pipefd = fd;
+	context_failed = false;
 
 	mainloop = pa_mainloop_new();
 	if (!mainloop) {
@@ -162,8 +170,11 @@ void pa_watcher(int fd)
 	pa_context_set_state_callback(context, context_state_callback, NULL);
 	ret = pa_context_connect(context, NULL, 0, NULL);
 	if (ret < 0) {
-		fprintf(stderr, "pa_context_connect() failed: %s\n",
-			pa_strerror(pa_context_errno(context)));
+		if (!context_failed) {
+			fprintf(stderr, "pa_context_connect() failed: %s\n",
+				pa_strerror(pa_context_errno(context)));
+			context_failed = true;
+		}
 		goto out;
 	}
 
